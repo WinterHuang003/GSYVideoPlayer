@@ -27,6 +27,7 @@ import com.shuyu.gsyvideoplayer.utils.Debuger;
 import com.shuyu.gsyvideoplayer.utils.NetInfoModule;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 import static com.shuyu.gsyvideoplayer.utils.CommonUtil.getTextSpeed;
@@ -342,27 +343,43 @@ public abstract class GSYVideoView extends GSYTextureRenderView implements GSYMe
     }
 
     /**
+     * 修改原版的内存泄漏-非静态内部类会持有外部类的引用
      * 监听是否有外部其他多媒体开始播放
      */
-    protected AudioManager.OnAudioFocusChangeListener onAudioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
+    protected AudioManager.OnAudioFocusChangeListener onAudioFocusChangeListener = new VideoViewOnAudioFocusChangeListener(this);
+
+    static class VideoViewOnAudioFocusChangeListener implements AudioManager.OnAudioFocusChangeListener {
+        WeakReference<GSYVideoView> gsyVideoViewWeakReference;
+
+        VideoViewOnAudioFocusChangeListener(GSYVideoView gsyVideoView) {
+            this.gsyVideoViewWeakReference = new WeakReference<>(gsyVideoView);
+        }
+
         @Override
         public void onAudioFocusChange(int focusChange) {
+            if (gsyVideoViewWeakReference == null) {
+                return;
+            }
+            GSYVideoView gsyVideoView = gsyVideoViewWeakReference.get();
+            if (gsyVideoView == null) {
+                return;
+            }
             switch (focusChange) {
                 case AudioManager.AUDIOFOCUS_GAIN:
-                    onGankAudio();
+                    gsyVideoView.onGankAudio();
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS:
-                    onLossAudio();
+                    gsyVideoView.onLossAudio();
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                    onLossTransientAudio();
+                    gsyVideoView.onLossTransientAudio();
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-                    onLossTransientCanDuck();
+                    gsyVideoView.onLossTransientCanDuck();
                     break;
             }
         }
-    };
+    }
 
     /**
      * 获得了Audio Focus
