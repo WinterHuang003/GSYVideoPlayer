@@ -855,17 +855,40 @@ public abstract class GSYVideoView extends GSYTextureRenderView implements GSYMe
      */
     protected void createNetWorkState() {
         if (mNetInfoModule == null) {
-            mNetInfoModule = new NetInfoModule(mContext.getApplicationContext(), new NetInfoModule.NetChangeListener() {
-                @Override
-                public void changed(String state) {
-                    if (!mNetSate.equals(state)) {
-                        Debuger.printfError("******* change network state ******* " + state);
-                        mNetChanged = true;
-                    }
-                    mNetSate = state;
-                }
-            });
+            mNetInfoModule = new NetInfoModule(mContext.getApplicationContext(), new GSYViewNetChangeListener(this));
             mNetSate = mNetInfoModule.getCurrentConnectionType();
+        }
+    }
+
+    /**
+     * 当网络状态变化
+     */
+    private void onNetChanged(String state) {
+        if (!mNetSate.equals(state)) {
+            Debuger.printfError("******* change network state ******* " + state);
+            mNetChanged = true;
+        }
+        mNetSate = state;
+    }
+
+    static class GSYViewNetChangeListener implements NetInfoModule.NetChangeListener {
+        WeakReference<GSYVideoView> gsyVideoViewWeakReference;
+
+        GSYViewNetChangeListener(GSYVideoView gsyVideoView) {
+            gsyVideoViewWeakReference = new WeakReference<>(gsyVideoView);
+        }
+
+        @Override
+        public void changed(String state) {
+            if (gsyVideoViewWeakReference == null) {
+                return;
+            }
+            GSYVideoView gsyVideoView = gsyVideoViewWeakReference.get();
+            if (gsyVideoView == null) {
+                return;
+            }
+            gsyVideoView.onNetChanged(state);
+
         }
     }
 
